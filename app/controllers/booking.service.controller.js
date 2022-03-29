@@ -5,12 +5,13 @@ const db = require("../models");
 const EventBooking = db.eventBooking;
 const EventsManager = db.eventsManager;
 
+//validation parameters
+var bookedSeats = 0; var capacity = 0;
 //----------------- Operations for event booking ------------------//
 
 //Create a new event booking
 exports.create = (req, res) => {
 
-	console.log(req.body);
 	//Validate request
 	if(!req.body) {
 		res.status(400).send({ message: "Content cannot be empty!" });
@@ -25,59 +26,49 @@ exports.create = (req, res) => {
 	});
 	
 	// validate booking date is before the scheduled event date
-	var bookingDate = new Date();
-	var eventDate, capacity;
-	
-	const eventName = req.query.eventName;
-	console.log("inside find bookings by event name: " + eventName);
-	
-	EventsManager.find({ eventName: eventName })
-		.then(data => {
-			eventDate = data.eventDate;
-			capacity = data.capacity;
-		})
-		.catch(err => {
-			res.status(500).send({
-				message: err.message || "Error occurred during validation by event name"
-			});
-		});
-	
-	if (bookingDate > eventDate) {
-		res.status(400).send({ message: "this event is already over in a past date..sorry!!!" });
-		return;
-	}
-		
+	var eventName = req.body.eventName;
+	var quantity = req.body.quantity;
+
 	// validate seats availability
-	var existingBookings;
-	var bookedSeats=0;
-	
-	EventBooking.find({ eventName: eventName })
-		.then(data => existingBookings)
-		.catch(err => {
-			res.status(500).send({
-				message: err.message || "Error occurred finding existing bookings"
-			});
-		});
+	const findSeats = async() => {
+		bookedSeats = await retrieveBookedSeats(eventName);
 		
-	for (var i=0; i< existingBookings.size(); i++) {
-		bookedSeats = bookedSeats + existingBookings[i].quantity;
-	}
-	
-	if(bookedSeats >= capacity) {
-		res.status(400).send({ message: "No available bookings for this event, full house already..try booking for a different event !!!" });
-		return;
-	}
-	//save event booking collection in the DB
-	eventBooking
-		.save(eventBooking)
-		.then(data => {
-			res.send(data);
-		})
-		.catch(err => {
-			res.status(500).send({
-				message: err.message || "error adding an event booking"
+		EventsManager.findOne({ eventName: eventName }).then(result => {
+			const obj = result.toObject();
+			const str = JSON.stringify(obj);
+			const eventDetails = JSON.parse(str);
+
+			const bookingDate = new Date();
+			const eventDate = new Date(eventDetails.eventDate);
+			
+			if (bookingDate > eventDate) {
+				res.status(400).send({ message: "this event is already over in a past date..sorry!!!" });
+				return 0;
+			}
+
+		capacity = eventDetails.capacity;
+
+		var remainingSeats = (capacity - bookedSeats);
+		console.log("quantity: " + quantity + " remainingSeats: " + remainingSeats);
+
+		if(quantity > remainingSeats) {
+			res.status(400).send({ message: "No available bookings for this event, full house already..try booking for a different event !!!" });
+			return;
+		}
+
+			//save event booking collection in the DB
+			eventBooking.save(eventBooking)
+				.then(data => {
+				res.send(data)
 			});
+			
+		}).catch(err => {
+			res.status(500).send({message: err.message || "Error when checking availability"});
+			return;
 		});
+	}
+
+	findSeats();
 };
 
 //Retrieve all bookings from Mongo DB
@@ -166,3 +157,14 @@ exports.deleteAll = (req, res) => {
 			});
 		});
 };
+
+async function retrieveBookedSeats() {
+	
+	let eventName = arguments[0];
+	let bookedSeats = 0;
+	for await (const eventDoc of EventBooking.find({ eventName: eventName })) {
+		bookedSeats = bookedSeats + eventDoc.quantity;
+	}
+	
+	return bookedSeats;
+}
