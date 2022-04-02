@@ -60,10 +60,10 @@ Note: Replace `<user-name>` with your desired value.
 2. Pull the booking-service docker image from [DockerHub](https://hub.docker.com/repository/docker/pranab698/booking-service/tags?page=1&ordering=last_updated) \
 `docker pull pranab698/booking-service:latest`
 
-2. Run \
+3. Run \
 `docker run -p 8083:8083 -d pranab698/booking-service`
 
-3. Verify the application on http://localhost:8083/
+4. Verify the application on http://localhost:8083/
 
 ---
 
