@@ -48,6 +48,8 @@ Run `npm install`
 
 2. Run `docker run -p 8083:8083 -d <user-name>/booking-service`
 
+3. Verify the application on http://localhost:8083/
+
 Note: Replace `<user-name>` with your desired value.
 
 ---
