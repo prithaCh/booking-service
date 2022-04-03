@@ -1,5 +1,10 @@
+
 //Initialize dependencies
 const db = require("../models");
+const eventConfig = require("../config/event.mgmt.config.js");
+const axios = require('axios');
+
+var http = require('http');
 
 //Initialize Mongo collections
 const EventBooking = db.eventBooking;
@@ -7,6 +12,8 @@ const EventsManager = db.eventsManager;
 
 //validation parameters
 var bookedSeats = 0; var capacity = 0;
+var isValidRequest = true;
+
 //----------------- Operations for event booking ------------------//
 
 //Create a new event booking
@@ -25,50 +32,77 @@ exports.create = (req, res) => {
 		quantity: req.body.quantity
 	});
 	
+	
 	// validate booking date is before the scheduled event date
 	var eventName = req.body.eventName;
 	var quantity = req.body.quantity;
+	var url = eventConfig.url + encodeURI(eventName);
 
-	// validate seats availability
-	const findSeats = async() => {
-		bookedSeats = await retrieveBookedSeats(eventName);
+	// call event management request with event name
+	const sendGetRequest = async (reqsend, ressend) => {
+
+		var eventDetails = '';
 		
-		EventsManager.findOne({ eventName: eventName }).then(result => {
-			const obj = result.toObject();
-			const str = JSON.stringify(obj);
-			const eventDetails = JSON.parse(str);
-
-			const bookingDate = new Date();
-			const eventDate = new Date(eventDetails.eventDate);
-			
-			if (bookingDate > eventDate) {
-				res.status(400).send({ message: "this event is already over in a past date..sorry!!!" });
-				return 0;
-			}
+		const response = await axios.get(url);
+		const str = JSON.stringify(response.data);
+		
+		eventDetails = JSON.parse(str);
+		
+		const bookingDate = new Date();
+		const eventDate = new Date(eventDetails.eventDate);
 
 		capacity = eventDetails.capacity;
 
+		if (bookingDate > eventDate) {
+			isValidRequest = false;
+			var err = new Error();
+			err.status = 400;
+			err.message = "this event is already over in a past date..sorry!!!";
+			throw err;
+		}
+	};
+
+	// validate seats availability
+	const findSeats = async() => {
+		
+		bookedSeats = await retrieveBookedSeats(eventName);
+		
 		var remainingSeats = (capacity - bookedSeats);
 		console.log("quantity: " + quantity + " remainingSeats: " + remainingSeats);
 
 		if(quantity > remainingSeats) {
-			res.status(400).send({ message: "No available bookings for this event, full house already..try booking for a different event !!!" });
-			return;
+			isValidRequest = false;
+			var err = new Error();
+			err.status = 400;
+			err.message = "No available bookings for this event, full house already";
+			throw err;
 		}
+	};
+
+
+	process.on('unhandledRejection', error => {
+		console.log("here in the log");
+		res.end();
+	});
+
+		try {
+		
+			//get call to event management service (HTTP-REST)
+			sendGetRequest();
+
+			//check available seats
+			findSeats();
 
 			//save event booking collection in the DB
 			eventBooking.save(eventBooking)
 				.then(data => {
 				res.send(data)
 			});
-			
-		}).catch(err => {
-			res.status(500).send({message: err.message || "Error when checking availability"});
-			return;
-		});
-	}
-
-	findSeats();
+				
+		} catch(err) {
+				res.status(400).send({message: err.message || "   Error when checking seat availability"});
+				return;
+		}
 };
 
 //Retrieve all bookings from Mongo DB
