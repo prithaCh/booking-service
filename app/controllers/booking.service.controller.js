@@ -8,11 +8,9 @@ var http = require('http');
 
 //Initialize Mongo collections
 const EventBooking = db.eventBooking;
-const EventsManager = db.eventsManager;
 
 //validation parameters
 var bookedSeats = 0; var capacity = 0;
-var isValidRequest = true;
 
 //----------------- Operations for event booking ------------------//
 
@@ -54,16 +52,16 @@ exports.create = (req, res) => {
 		capacity = eventDetails.capacity;
 
 		if (bookingDate > eventDate) {
-			isValidRequest = false;
-			var err = new Error();
-			err.status = 400;
-			err.message = "this event is already over in a past date..sorry!!!";
-			throw err;
+			res.send({message: "this event is already over in a past date..sorry!!!"});
+		} else {
+			//check available seats
+			findSeats(capacity);
 		}
+
 	};
 
 	// validate seats availability
-	const findSeats = async() => {
+	const findSeats = async(capacity) => {
 		
 		bookedSeats = await retrieveBookedSeats(eventName);
 		
@@ -71,38 +69,18 @@ exports.create = (req, res) => {
 		console.log("quantity: " + quantity + " remainingSeats: " + remainingSeats);
 
 		if(quantity > remainingSeats) {
-			isValidRequest = false;
-			var err = new Error();
-			err.status = 400;
-			err.message = "No available bookings for this event, full house already";
-			throw err;
-		}
-	};
-
-
-	process.on('unhandledRejection', error => {
-		console.log("here in the log");
-		res.end();
-	});
-
-		try {
-		
-			//get call to event management service (HTTP-REST)
-			sendGetRequest();
-
-			//check available seats
-			findSeats();
-
+			res.send({message: "No available bookings for this event, full house already"});
+		} else {
 			//save event booking collection in the DB
 			eventBooking.save(eventBooking)
 				.then(data => {
 				res.send(data)
 			});
-				
-		} catch(err) {
-				res.status(400).send({message: err.message || "   Error when checking seat availability"});
-				return;
 		}
+	};
+
+	//get call to event management service (HTTP-REST)
+	sendGetRequest();
 };
 
 //Retrieve all bookings from Mongo DB
