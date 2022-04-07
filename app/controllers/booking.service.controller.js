@@ -23,13 +23,15 @@ exports.create = (req, res) => {
 		return;
 	}
 	
+	var currentDate = new Date();
+	
 	//create event booking object
 	const eventBooking = new EventBooking({
 		email: req.body.email,
 		eventName: req.body.eventName,
-		quantity: req.body.quantity
+		quantity: req.body.quantity,
+		bookingDate: currentDate
 	});
-	
 	
 	// validate booking date is before the scheduled event date
 	var eventName = req.body.eventName;
