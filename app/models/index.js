@@ -8,6 +8,5 @@ const db = {};
 db.mongoose = mongoose;
 db.url = dbConfig.url;
 db.eventBooking = require("./booking-service.model.js")(mongoose);
-db.eventsManager = require("./eventsmanagement.template.model.js")(mongoose);
 
 module.exports = db;
