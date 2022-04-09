@@ -8,6 +8,7 @@
   - [Run booking-service docker container from DockerHub](#run-booking-service-docker-container-from-dockerhub)
   - [Tech stack](#tech-stack)
   - [TODO](#todo)
+
 ## Description
 
 Booking service exposes API's for event bookings by users:
@@ -58,10 +59,10 @@ Note: Replace `<user-name>` with your desired value.
 
 1. Start your docker server (docker desktop or minikube)
 2. Pull the booking-service docker image from [DockerHub](https://hub.docker.com/repository/docker/pranab698/booking-service/tags?page=1&ordering=last_updated) \
-`docker pull pranab698/booking-service:latest`
+`docker pull pranab698/booking-service:v0.1.0`
 
 3. Run \
-`docker run -p 8083:8083 -d pranab698/booking-service`
+`docker run -p 8083:8083 -d pranab698/booking-service:v0.1.0`
 
 4. Verify the application on http://localhost:8083/
 
